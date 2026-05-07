@@ -71,12 +71,15 @@ print(f"Средняя глубина просмотра: {avg_depth:.2f} стр
 print(f"Среднее время на сайте: {avg_time:.0f} сек.")
 
 # ===================== ГРАФИК 1: Распределение кликов =====================
+clicks_nonzero = df[df['Clicks'] > 0]['Clicks']
 fig, ax = plt.subplots(figsize=(10, 6))
-ax.hist(df['Clicks'], bins=20, color=ACCENT, edgecolor='white', alpha=0.8)
-ax.axvline(df['Clicks'].median(), color=ACCENT2, linestyle='--', label=f"Медиана: {df['Clicks'].median():.0f}")
-ax.set_title('Распределение количества кликов по страницам')
-ax.set_xlabel('Клики')
-ax.set_ylabel('Количество страниц')
+ax.hist(clicks_nonzero, bins=40, color=ACCENT, edgecolor='white', alpha=0.8, log=True)
+median_val = clicks_nonzero.median()
+ax.axvline(median_val, color=ACCENT2, linestyle='--', label=f"Медиана: {median_val:.0f}")
+ax.set_xscale('log')
+ax.set_title('Распределение кликов по страницам (только страницы с кликами, лог. шкала)')
+ax.set_xlabel('Клики (log)')
+ax.set_ylabel('Количество страниц (log)')
 ax.legend(facecolor='#1a2f4e', edgecolor='#4A6080')
 ax.grid(axis='y', alpha=0.4)
 fig.tight_layout()
@@ -116,16 +119,17 @@ plt.savefig('images/03_correlation_heatmap.png', dpi=150, bbox_inches='tight')
 plt.close()
 
 # ===================== ГРАФИК 4: Топ-10 страниц по кликам =====================
-top10 = df.nlargest(10, 'Clicks')[['Clicks', 'Segments']].reset_index(drop=True)
-top10.index = [f'Стр.{i+1}' for i in range(10)]
+top10 = df.nlargest(10, 'Clicks').copy().reset_index(drop=True)
+# Сокращаем URL до читаемого вида
+top10['label'] = top10['Url'].str.replace(r'https?://', '', regex=True).str.slice(0, 50)
 
-fig, ax = plt.subplots(figsize=(11, 6))
-bars = ax.barh(top10.index[::-1], top10['Clicks'][::-1], color=ACCENT)
+fig, ax = plt.subplots(figsize=(13, 6))
+bars = ax.barh(top10['label'][::-1], top10['Clicks'][::-1], color=ACCENT)
 max_val = top10['Clicks'].max()
-offset = max_val * 0.03
 for bar, val in zip(bars, top10['Clicks'][::-1]):
-    ax.text(val + offset, bar.get_y() + bar.get_height()/2, str(val), va='center', color='white', fontsize=9)
-ax.set_xlim(right=ax.get_xlim()[1] * 1.12)
+    ax.text(val + max_val * 0.02, bar.get_y() + bar.get_height()/2,
+            str(val), va='center', color='white', fontsize=9)
+ax.set_xlim(right=ax.get_xlim()[1] * 1.15)
 ax.set_title('Топ-10 страниц по кликам')
 ax.grid(axis='x', alpha=0.4)
 fig.tight_layout()
